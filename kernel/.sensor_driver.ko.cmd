@@ -1,0 +1,1 @@
+cmd_/home/god/workspace/kernel/sensor_driver.ko := ld -r -m elf_x86_64 -z noexecstack --build-id=sha1  -T scripts/module.lds -o /home/god/workspace/kernel/sensor_driver.ko /home/god/workspace/kernel/sensor_driver.o /home/god/workspace/kernel/sensor_driver.mod.o;  true

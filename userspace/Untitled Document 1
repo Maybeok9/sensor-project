@@ -1,0 +1,67 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <sys/socket.h>
+#include <sys/un.h>
+
+#define SOCKET_PATH "/run/sensor_collector.sock"
+
+int main(int argc, char *argv[]) {
+    // Kiểm tra nếu người dùng không gõ tham số lệnh
+    if (argc < 2) {
+        fprintf(stderr, "Cú pháp sử dụng:\n");
+        fprintf(stderr, "  %s stats <0|1|2|all>\n", argv[0]);
+        fprintf(stderr, "  %s set-rate <0|1|2|all> <tần_số_Hz>\n", argv[0]);
+        fprintf(stderr, "  %s pause <0|1|2>\n", argv[0]);
+        fprintf(stderr, "  %s resume <0|1|2>\n", argv[0]);
+        fprintf(stderr, "  %s status\n", argv[0]);
+        return 1;
+    }
+
+    int cli_fd;
+    struct sockaddr_un addr;
+    char cmd_buf[128] = {0};
+    char rx_buf[1024] = {0};
+
+    // 1. Ghép tất cả các tham số argv thành một chuỗi văn bản duy nhất
+    // Ví dụ: "./sensor_ctl set-rate 0 5" -> "set-rate 0 5"
+    for (int i = 1; i < argc; i++) {
+        strcat(cmd_buf, argv[i]);
+        if (i < argc - 1) {
+            strcat(cmd_buf, " ");
+        }
+    }
+
+    // 2. Khởi tạo Socket Client Unix Domain
+    cli_fd = socket(AF_UNIX, SOCK_STREAM, 0);
+    if (cli_fd < 0) {
+        perror("CLI: Không thể tạo socket");
+        return 1;
+    }
+
+    memset(&addr, 0, sizeof(struct sockaddr_un));
+    addr.sun_family = AF_UNIX;
+    strncpy(addr.sun_path, SOCKET_PATH, sizeof(addr.sun_path) - 1);
+
+    // 3. Kết nối tới tiến trình Daemon thu thập
+    if (connect(cli_fd, (struct sockaddr *)&addr, sizeof(struct sockaddr_un)) < 0) {
+        perror("CLI: Không thể kết nối tới sensor_collector daemon");
+        close(cli_fd);
+        return 1;
+    }
+
+    // 4. Gửi chuỗi lệnh đã đóng gói sang cho Listener
+    send(cli_fd, cmd_buf, strlen(cmd_buf), 0);
+
+    // 5. Hứng dữ liệu kết quả định dạng văn bản / bảng biểu trả về
+    int bytes_received = recv(cli_fd, rx_buf, sizeof(rx_buf) - 1, 0);
+    if (bytes_received > 0) {
+        printf("%s", rx_buf); // In trực tiếp kết quả xử lý ra Terminal
+    } else {
+        printf("Không nhận được phản hồi từ Daemon.\n");
+    }
+
+    close(cli_fd);
+    return 0;
+}
