@@ -13,11 +13,12 @@ The final thread inside the daemon is the IPC listener (listener) which utilize 
 When the user use the registered cli_tool (s_ctl), it will connect to socket_p and will act as a provider which send according command to the listener which in turn will call ioctl() or change settings of r_thread.
 	
 	// Usage
-Run "
+	Run 
+	```code
 	cd /kernel &&
 	make clean &&
 	make &&
-	sudo rmmod && 
+	sudo rmmod sensor_driver.ko && 
 	sudo insmod sensor_driver.ko &&
 	cd ../userspace &&
 	gcc sensor_collector.c -o sensor_collector -lpthread &&
@@ -25,7 +26,7 @@ Run "
 	cp sensor_collector /usr/local/bin &&
 	cp sensor_ctl /usr/local/bin &&
 	cd ..
-	"
+	```
 Now use cmd "sudo sensor_collector" to use default parameter or change default params with :
 		sensor_collector [OPTIONS]
 			-d <device>	Device path (default: /dev/sensor0)
