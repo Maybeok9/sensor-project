@@ -18,7 +18,7 @@ When the user use the registered cli_tool (s_ctl), it will connect to socket_p a
 	cd /kernel &&
 	make clean &&
 	make &&
-	sudo rmmod sensor_driver.ko 2>/dev/null && 
+	sudo rmmod sensor_driver.ko 2>/dev/null || true && 
 	sudo insmod sensor_driver.ko &&
 	cd ../userspace &&
 	gcc sensor_collector.c -o sensor_collector -lpthread &&
