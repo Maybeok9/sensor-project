@@ -125,6 +125,19 @@ static pthread_mutex_t pr_lock = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t pr_cond[SENSOR_COUNT] = {PTHREAD_COND_INITIALIZER, PTHREAD_COND_INITIALIZER, PTHREAD_COND_INITIALIZER};
 static volatile sig_atomic_t rt_paused[SENSOR_COUNT] = {0,0,0};
 
+/* Function to convert argv from ctl to int */
+static int ctoi (char * arg) {
+    if (strcmp(arg, "0") == 0) {
+        return 0;
+    }
+    else if (strcmp(arg, "1") == 0) {
+        return 1;
+    }
+    else if (strcmp(arg, "2") == 0) {
+        return 2;
+    }
+    else return -1;
+}
 /* Reader thread */
 void * s_reader_thread (void * arg) {
     int id = *(int*)arg;
@@ -358,7 +371,7 @@ static void* s_ipc_thread(void *arg) {
             
             int parsed_b = sscanf(buffer, "%9s %9s %d",cmd,tar,&val);
             if (parsed_b < 1) {
-                send(client_fd, "Incorrect syntax\n", 17, 0);
+                send(client_fd, "Not sufficient arg\n", 19, 0);
                 close(client_fd);
                 continue;
             }
@@ -369,11 +382,12 @@ static void* s_ipc_thread(void *arg) {
                     close(client_fd);
                     continue;
                 }
-                sel_id = atoi(tar);
+                sel_id = ctoi(tar);
                 if ((sel_id >= 0) && (sel_id < 3)) {
                     struct sensor_stats h_stats;
                     ret=quick_fd(&fd, sel_id);
                     if (ret!=0) {
+                        send(client_fd, "Cant open/select sensor\n", 24, 0);
                         close(client_fd);
                         continue;
                     }
@@ -381,6 +395,7 @@ static void* s_ipc_thread(void *arg) {
                     close(fd);
                     
                     if (res!=0) {
+                        send(client_fd, "Cant get sensor stats\n", 22, 0);
                         close(client_fd);
                         continue;
                     }
@@ -389,7 +404,29 @@ static void* s_ipc_thread(void *arg) {
                 }
                 
                 else if (strcmp(tar, "all") == 0) {
-                
+                    send(client_fd, "SENSOR\tTYPE\tRATE(Hz)\tREAD_CNT\tERR_CNT\tLAST_VALUE\n",49,0);
+                    send(client_fd, "------------------------------------------------------------------\n", 67,0);
+                    char * type[3] = {"TEMP","HUMID","PRESS"};
+                    char * sym[3] = {"°C","%RH","hPa"};
+                    for (int i=0 ; i<SENSOR_COUNT ; i++) {
+                    struct sensor_stats h_stats;
+                    ret = quick_fd(&fd, i);
+                    if (ret!=0) {
+                        send(client_fd, "Cant open/select sensor\n", 24, 0);
+                        close(client_fd);
+                        continue;
+                        }
+                    res= ioctl(fd, SENSOR_GET_STATS, &h_stats);
+                    close(fd);
+                    
+                    if (res!=0) {
+                        send(client_fd, "Cant get sensor stats\n", 22, 0);
+                        close(client_fd);
+                        continue;
+                    }
+                    snprintf(send_buf,sizeof(send_buf), "%d\t%s\t%d\t\t%d\t\t%d\t%.2f%s\n",  h_stats.sensor_id, type[i],h_stats.sampling_rate, h_stats.read_count, h_stats.error_count, h_stats.last_value/100.0,sym[i]);
+                    send(client_fd, send_buf, strlen(send_buf),0);
+                }
                 }
                 
             }
@@ -403,12 +440,11 @@ static void* s_ipc_thread(void *arg) {
                 }
                 if ( val < 1) val = 1;
                 else if (val > 100) val =100;
-                sel_id = atoi(tar);
+                sel_id = ctoi(tar);
                 if ((sel_id >= 0) && (sel_id < 3)) {
                     
                     intervals[sel_id] = 1000/val; 
-                    snprintf(send_buf,sizeof(send_buf), "OK\n");
-                    send(client_fd, send_buf, strlen(send_buf),0);
+                    send(client_fd, "OK\n", 3, 0);
                 }
                 else if (strcmp(tar, "all") == 0) {
                     
@@ -416,20 +452,13 @@ static void* s_ipc_thread(void *arg) {
                     intervals[0] = s_r_all;
                     intervals[1] = s_r_all;
                     intervals[2] = s_r_all;
-                    snprintf(send_buf,sizeof(send_buf), "OK\n");
-                    send(client_fd, send_buf, strlen(send_buf),0);
+                    send(client_fd, "OK\n", 3, 0);
                 }
             }
             
             /* Cmd is status*/
             else if (strcmp(cmd, "status") == 0) {
-            /*
-                if (parsed_b < 2) {
-                    send(client_fd, "Incorrect syntax for status\n", 28, 0);
-                    close(client_fd);
-                    continue;
-                }
-            */
+                
                 int record_copy[3];
                 long uptime[SENSOR_COUNT] = {0,0,0};
                 time_t current_time = time(NULL);
@@ -455,11 +484,10 @@ static void* s_ipc_thread(void *arg) {
                     close(client_fd);
                     continue;
                 }
-                sel_id = atoi(tar);
+                sel_id = ctoi(tar);
                 if ((sel_id >= 0) && (sel_id < 3)) {
                 rt_paused[sel_id] = 1;
-                snprintf(send_buf,sizeof(send_buf), "OK\n");
-                send(client_fd, send_buf, strlen(send_buf),0);
+                send(client_fd, "OK\n", 3, 0);
                 }
             }
             else if (strcmp(cmd, "resume") == 0) {
@@ -468,7 +496,7 @@ static void* s_ipc_thread(void *arg) {
                     close(client_fd);
                     continue;
                 }
-                sel_id = atoi(tar);
+                sel_id = ctoi(tar);
                 if ((sel_id >= 0) && (sel_id < 3)) {
                 rt_paused[sel_id] = 0;
                 
@@ -476,15 +504,115 @@ static void* s_ipc_thread(void *arg) {
                 pthread_cond_signal(&pr_cond[sel_id]);
                 pthread_mutex_unlock(&pr_lock);
                 
-                snprintf(send_buf,sizeof(send_buf), "OK\n");
+                send(client_fd, "OK\n", 3, 0);
+                }
+            }
+            
+            /* Cmd is reset */
+            else if (strcmp(cmd, "reset") == 0) {
+                if (parsed_b < 2) {
+                    send(client_fd, "Incorrect syntax for reset\n", 27, 0);
+                    close(client_fd);
+                    continue;
+                }
+                sel_id = ctoi(tar);
+                if ((sel_id >= 0) && (sel_id < 3)) {
+                ret=quick_fd(&fd, sel_id);
+                if (ret!=0) {
+                    send(client_fd, "Cant open/select sensor\n", 24, 0);
+                    close(client_fd);
+                    continue;
+                }
+                res= ioctl(fd, SENSOR_RESET);
+                close(fd);
+                    
+                if (res!=0) {
+                    send(client_fd, "Reset sensor failed\n", 20, 0);
+                    close(client_fd);
+                    continue;
+                }
+                snprintf(send_buf,sizeof(send_buf),"Reset sensor %d successful\n", sel_id);
                 send(client_fd, send_buf, strlen(send_buf),0);
                 }
+                
+                else if (strcmp(tar, "all") == 0) {
+                for (int i=0 ; i<SENSOR_COUNT ; i++) {
+                    ret = quick_fd(&fd, i);
+                    if (ret!=0) {
+                    send(client_fd, "Cant open/select sensor\n", 24, 0);
+                    close(client_fd);
+                    continue;
+                    }
+                    res= ioctl(fd, SENSOR_RESET);
+                    close(fd);
+                    
+                    if (res!=0) {
+                        send(client_fd, "Reset sensor failed\n", 20, 0);
+                        close(client_fd);
+                        continue;
+                    }
+                    snprintf(send_buf,sizeof(send_buf),"Reset sensor %d successful\n", i);
+                    send(client_fd, send_buf, strlen(send_buf),0);
+                }
+                }
+                
+            }
+            
+            /* Cmd is set-s-rate */
+            else if (strcmp(cmd, "set-srate") == 0) {
+                if (parsed_b < 3) {
+                    send(client_fd, "Incorrect syntax for set-srate\n", 32, 0);
+                    close(client_fd);
+                    continue;
+                }
+                if (val > 10) val = 10;
+                else if (val < 1) val =1;
+                sel_id = ctoi(tar);
+                if ((sel_id >= 0) && (sel_id < 3)) {
+                ret=quick_fd(&fd, sel_id);
+                if (ret!=0) {
+                    send(client_fd, "Cant open/select sensor\n", 24, 0);
+                    close(client_fd);
+                    continue;
+                }
+                res= ioctl(fd, SENSOR_SET_RATE,val);
+                close(fd);
+                    
+                if (res!=0) {
+                    send(client_fd, "Set sampling rate sensor failed\n", 32, 0);
+                    close(client_fd);
+                    continue;
+                }
+                snprintf(send_buf,sizeof(send_buf),"Set sampling rate sensor %d successful\n", sel_id);
+                send(client_fd, send_buf, strlen(send_buf),0);
+                }
+                
+                else if (strcmp(tar, "all") == 0) {
+                for (int i=0 ; i<SENSOR_COUNT ; i++) {
+                ret = quick_fd(&fd, i);
+                if (ret!=0) {
+                    send(client_fd, "Cant open/select sensor\n", 24, 0);
+                    close(client_fd);
+                    continue;
+                }
+                res= ioctl(fd, SENSOR_SET_RATE,val);
+                close(fd);
+                    
+                if (res!=0) {
+                    send(client_fd, "Set sampling rate sensor failed\n", 32, 0);
+                    close(client_fd);
+                    continue;
+                }
+                snprintf(send_buf,sizeof(send_buf),"Set sampling rate sensor %d successful\n", i);
+                send(client_fd, send_buf, strlen(send_buf),0);
+                }
+                }
+                
             }
             
             /* Not syntax correct */
             else {
-            snprintf(send_buf,sizeof(send_buf), "Incorrect syntax\n");
-            send(client_fd, send_buf, strlen(send_buf),0);
+            send(client_fd, "Incorrect syntax\n", 17, 0);
             close(client_fd);
             continue;
             }
@@ -577,7 +705,7 @@ int main(int argc, char* argv[]) {
         }
         *id = i;
         if (pthread_create(&r_thread[i], NULL, s_reader_thread, id) != 0) {
-            write(2, "Cant create reader thread\n", 26); // Fixed len: 26
+            write(2, "Cant create reader thread\n", 27);
             free(id);
             flag_keep_running = 0;
             break;
@@ -599,11 +727,13 @@ int main(int argc, char* argv[]) {
     if (ipc_created) {
         pthread_join(ipc_thread, NULL);
     }
+    /* Incase there are still some paused r_thread after ipc_thread ended */
     for (int i =0; i < SENSOR_COUNT; i++) {
         pthread_mutex_lock(&pr_lock);
         pthread_cond_broadcast(&pr_cond[i]);
         pthread_mutex_unlock(&pr_lock);
     }
+    /* Incase of error in r_thread creating */
     for (int i = 0; i < created_readers; i++) {
         pthread_join(r_thread[i], NULL);
     }

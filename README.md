@@ -36,10 +36,12 @@ Now use cmd "sudo sensor_collector" to use default parameter or change default p
 Upon running sensor_collector, you can then use a new terminal to run :
 		sensor_ctl 
 			stats <0|1|2|all>		Show stats of each sensor
-			set-rate <value> <0|1|2|all>	Set read speed of each r_thread
+			set-rate <0|1|2|all> <value>	Set read speed of each r_thread
 			pause <0|1|2>			Pause a r_thread
 			resume <0|1|2>			Resume a paused r_thread
 			status 				Return status of all sensors
+			reset <0|1|2|all>		Reset all sensor to their default values
+			set-srate <0|1|2|all> <value>	Set sampling rate of sensor
 
 2.Design decisions
 

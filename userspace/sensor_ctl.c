@@ -16,6 +16,8 @@ int main(int argc, char *argv[]) {
         fprintf(stderr, "  %s pause <0|1|2>\n", argv[0]);
         fprintf(stderr, "  %s resume <0|1|2>\n", argv[0]);
         fprintf(stderr, "  %s status\n", argv[0]);
+        fprintf(stderr, "  %s reset <0|1|2|all>\n", argv[0]);
+        fprintf(stderr, "  %s set-srate <0|1|2|all> <Hz>\n", argv[0]);
         return 1;
     }
 
