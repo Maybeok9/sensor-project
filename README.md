@@ -28,7 +28,7 @@ When the user use the registered cli_tool (s_ctl), it will connect to socket_p a
 	cd ..
 	```
 Now use cmd "sudo sensor_collector" to use default parameter or change default params with :
-	```
+	
 	sensor_collector [OPTIONS]
 	
 	-d <device>	Device path (default: /dev/sensor0)
@@ -39,9 +39,9 @@ Now use cmd "sudo sensor_collector" to use default parameter or change default p
 	
 	-i <ms>		Initial interval cho tất cả sensor (default: 1000ms)
 	
-	```
+	
 Upon running sensor_collector, you can then use a new terminal to run :
-	```
+	
 	sensor_ctl 
 	
 	stats <0|1|2|all>		Show stats of each sensor
@@ -58,7 +58,7 @@ Upon running sensor_collector, you can then use a new terminal to run :
 	
 	set-srate <0|1|2|all> <value>	Set sampling rate of sensor
 	
-	```
+	
 2.Design decisions
 
 Each sensor has 1 data generator and 1 data consumer, so each should have its own spinlock as the consumer 1 when run would only lock sensor 1 for its use. Had there been a global lock, once consumer 1 run it would block every other consumer and data generator, this would technically work but defeat the purpose of using r_thread. So for each region of shared resource, 1 spinlock/mutex is best of use.
