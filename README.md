@@ -29,20 +29,22 @@ When the user use the registered cli_tool (s_ctl), it will connect to socket_p a
 	```
 Now use cmd "sudo sensor_collector" to use default parameter or change default params with :
 	```
-		sensor_collector [OPTIONS]
-			-d <device>	Device path (default: /dev/sensor0)
-			-l <logfile>	Log file path (default: /tmp/sensor_collector.log)
-			-s <sockpath>	Unix socket path (default: /tmp/run.socket)
-			-i <ms>		Initial interval cho tất cả sensor (default: 1000ms)
+	sensor_collector [OPTIONS]
+	-d <device>	Device path (default: /dev/sensor0)
+	-l <logfile>	Log file path (default: /tmp/sensor_collector.log)
+	-s <sockpath>	Unix socket path (default: /tmp/run.socket)
+	-i <ms>		Initial interval cho tất cả sensor (default: 1000ms)
+	```
 Upon running sensor_collector, you can then use a new terminal to run :
-		sensor_ctl 
-			stats <0|1|2|all>		Show stats of each sensor
-			set-rate <0|1|2|all> <value>	Set read speed of each r_thread
-			pause <0|1|2>			Pause a r_thread
-			resume <0|1|2>			Resume a paused r_thread
-			status 				Return status of all sensors
-			reset <0|1|2|all>		Reset all sensor to their default values
-			set-srate <0|1|2|all> <value>	Set sampling rate of sensor
+	```
+	sensor_ctl 
+	stats <0|1|2|all>		Show stats of each sensor
+	set-rate <0|1|2|all> <value>	Set read speed of each r_thread
+	pause <0|1|2>			Pause a r_thread
+	resume <0|1|2>			Resume a paused r_thread
+	status 				Return status of all sensors
+	reset <0|1|2|all>		Reset all sensor to their default values
+	set-srate <0|1|2|all> <value>	Set sampling rate of sensor
 	```
 2.Design decisions
 
