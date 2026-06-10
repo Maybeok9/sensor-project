@@ -23,8 +23,8 @@ When the user use the registered cli_tool (s_ctl), it will connect to socket_p a
 	cd ../userspace &&
 	gcc sensor_collector.c -o sensor_collector -lpthread &&
 	gcc sensor_ctl.c -o sensor_ctl &&
-	cp sensor_collector /usr/local/bin &&
-	cp sensor_ctl /usr/local/bin &&
+	sudo cp sensor_collector /usr/bin &&
+	sudo cp sensor_ctl /usr/bin &&
 	cd ..
 	```
 Now use cmd "sudo sensor_collector" to use default parameter or change default params with :
@@ -38,6 +38,8 @@ Now use cmd "sudo sensor_collector" to use default parameter or change default p
 		-s <sockpath>	Unix socket path (default: /tmp/run.socket)
 	
 		-i <ms>		Initial interval cho tất cả sensor (default: 1000ms)
+		-i0/i1/i2 <ms>	Initial interval riêng từng sensor (override -i)
+		-v		Verbose mode
 	
 	
 Upon running sensor_collector, you can then use a new terminal to run :

@@ -21,6 +21,9 @@ char socket_path[256] = "/tmp/run.socket";
 char device_path[256] = "/dev/sensor0";
 char log_path[256] = "/tmp/sensor_collector.log";
 
+/* Verbose mode */
+int verbose = 0;
+int check[3] = {0,0,0};
 /* Struct W_zone */
 struct w_zone {
     struct sensor_sample w_buf[OUT_BUFFER_MAX];
@@ -183,6 +186,7 @@ void * s_reader_thread (void * arg) {
         if (W_ring.count == OUT_BUFFER_MAX) {
             W_ring.tail = (W_ring.tail + 1) % OUT_BUFFER_MAX;
             W_ring.error_count[id] ++;
+            check[id] = 1;
         }
         else W_ring.count ++;
         
@@ -191,6 +195,10 @@ void * s_reader_thread (void * arg) {
         W_ring.read_count[id] ++;
         pthread_cond_signal(&W_ring.cond);
         pthread_mutex_unlock(&W_ring.lock);
+        if (check[id]) {
+            write(2,"Warning: Shared buffer full\n", 29);
+            check[id] = 0;
+        }
         itv = intervals[id]*1000;
         usleep(itv);
         
@@ -632,8 +640,8 @@ int main(int argc, char* argv[]) {
     
     /* Runtime setup */
     int opt;
-
-    while ((opt = getopt(argc, argv, "d:l:s:i")) != -1) {
+    
+    while ((opt = getopt(argc, argv, "d:l:s:i:")) != -1) {
 
     switch (opt) {
 
@@ -665,11 +673,39 @@ int main(int argc, char* argv[]) {
             intervals[i] = ms;
 
         break;
-
+    
     default:
         return 1;
     }
     }
+    
+    for (int i = 1; i < argc; i++) {
+
+    if (strcmp(argv[i], "-i0") == 0) {
+        int ms = atoi(argv[++i]);
+
+        if (ms < 100)
+            ms = 100;
+        intervals[0] = ms;
+    }
+    else if (strcmp(argv[i], "-i1") == 0) {
+        int ms = atoi(argv[++i]);
+
+        if (ms < 100)
+            ms = 100;
+        intervals[1] = ms;
+    }
+    else if (strcmp(argv[i], "-i2") == 0) {
+        int ms = atoi(argv[++i]);
+
+        if (ms < 100)
+            ms = 100;
+        intervals[2] = ms;
+    }
+    else if (strcmp(argv[i], "-v") == 0) {
+        verbose = 1;
+    }
+}
     
     boot_t = k_boot_t();
     pthread_t r_thread[SENSOR_COUNT];
