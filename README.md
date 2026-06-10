@@ -38,7 +38,9 @@ Now use cmd "sudo sensor_collector" to use default parameter or change default p
 		-s <sockpath>	Unix socket path (default: /tmp/run.socket)
 	
 		-i <ms>		Initial interval cho tất cả sensor (default: 1000ms)
+		
 		-i0/i1/i2 <ms>	Initial interval riêng từng sensor (override -i)
+		
 		-v		Verbose mode
 	
 	
